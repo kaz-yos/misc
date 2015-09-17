@@ -1,0 +1,211 @@
+\documentclass{article}
+
+%% Templates
+%% http://www.latextemplates.com
+
+%% Margin
+%% \usepackage[margin=1.5cm]{geometry}
+\usepackage[margin=2.0cm]{geometry}
+%% \addtolength{\topmargin}{0.3cm}
+%% \addtolength{\textheight}{1.75in}
+
+%% Math
+\usepackage{amsmath}
+%% Allow new page within align
+\allowdisplaybreaks
+\usepackage{cancel}
+
+% % Code
+\usepackage{listings}
+\usepackage{courier}
+\lstset{basicstyle=\footnotesize\ttfamily, breaklines=true, frame=single}
+
+%% Graphics
+\usepackage{graphicx}
+
+%% DAG
+\usepackage{tikz}
+\usetikzlibrary{positioning,shapes.geometric}
+
+%% Header
+\usepackage{fancyhdr}
+\pagestyle{fancy}
+\fancyhf{} % Erase first to supress section names
+\fancyhead[L]{kaz\_yos} % LEFT
+\fancyhead[C]{95CI for OR with interaction} % CENTER
+\fancyhead[R]{2014-11-10} % RIGHT
+\fancyfoot[C]{\thepage}
+%% \fancyfoot[R]{Page \thepage\ of \pageref{LastPage}}
+
+%% Section font size
+\usepackage{sectsty}
+\sectionfont{\small}
+\subsectionfont{\small}
+\subsubsectionfont{\small}
+
+%% Section numbering
+%% http://tex.stackexchange.com/questions/3177/how-to-change-the-numbering-of-part-chapter-section-to-alphabetical-r
+%% \renewcommand\thesection{\alph{section}}
+%% \renewcommand\thesubsection{\thesection.\arabic{subsection}}
+%% \renewcommand{\thesubsubsection}{\thesubsection.\alph{subsubsection}}
+%%
+%% http://tex.stackexchange.com/questions/40067/numbering-sections-with-sequential-integers
+%% \usepackage{chngcntr}
+%% \counterwithout{subsection}{section}
+
+%% enumerate
+\usepackage{enumerate}
+
+%% double space
+%% \usepackage{setspace}
+%% \linespread{2}
+
+\begin{document}
+<<message = FALSE, tidy = FALSE, echo = F>>=
+## knitr configuration: http://yihui.name/knitr/options#chunk_options
+showMessage <- FALSE
+showWarning <- TRUE
+set_alias(w = "fig.width", h = "fig.height", res = "results")
+opts_chunk$set(comment = "##", error= TRUE, warning = showWarning, message = showMessage,
+               tidy = FALSE, cache = F, echo = T,
+               fig.width = 5, fig.height = 5, dev.args = list(family = "sans"))
+knit_hooks$set(rgl = hook_rgl)
+@
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\section{Math}
+
+Let $X$ be the binary treatment indicator, and $M$ be the continuous effect modifier. The logistic regression model is defined as follows.
+
+\begin{align*}
+  g(E[Y]) &= \beta_0 + \beta_1 X + \beta_2 M + \beta_3 MX + \beta_4 C\\
+  &\textnormal{where $g(\cdot)$ is the logit function}\\
+  \\
+  &\textnormal{By transformation}\\
+  g(E[Y]) &= \beta_0 + (\beta_1 X + \beta_3 MX) + \beta_2 M + \beta_4 C\\
+  &= \beta_0 + (\beta_1  + \beta_3 M)X + \beta_2 M + \beta_4 C\\
+\end{align*}
+
+Thus, the log OR of interest is $(\beta_1  + \beta_3 M)$, a function of $M$, \textit{i.e.,} it varies depending on the value of $M$. The estimate of this log OR, $(\hat{\beta}_1 + \hat{\beta}_3 M)$, and its standard error, $\sqrt{Var(\hat{\beta}_1 + \hat{\beta}_3 M)}$ are also functions of $M$. The functional form of $Var(\hat{\beta}_1 + \hat{\beta}_3 M)$ is the following.
+
+\begin{align*}
+  Var(\hat{\beta}_1 + \hat{\beta}_3 M) &= Var(\hat{\beta}_1) + Var(\hat{\beta}_3 M) + 2Cov(\hat{\beta}_1, \hat{\beta}_3 M)\\
+  &= Var(\hat{\beta}_1) + (M^2) Var(\hat{\beta}_3) + 2(M) Cov(\hat{\beta}_1, \hat{\beta}_3)\\
+  &= Var(\hat{\beta}_3)(M^2) +2 Cov(\hat{\beta}_1, \hat{\beta}_3)(M) + Var(\hat{\beta}_1) \\
+  f(M) &= Var(\hat{\beta}_3)(M^2) +2 Cov(\hat{\beta}_1, \hat{\beta}_3)(M) + Var(\hat{\beta}_1) \\
+  &\textnormal{Estimated by}\\
+  \widehat{f}(M) &= \widehat{Var}(\hat{\beta}_3)(M^2) +2 \widehat{Cov}(\hat{\beta}_1, \hat{\beta}_3)(M) + \widehat{Var}(\hat{\beta}_1) \\
+\end{align*}
+
+This can be obtained from \texttt{R}'s \texttt{vcov(model)} function.
+
+\section{Implementation in R}
+<<size = "footnotesize">>=
+library(AER)
+data(Affairs)
+summary(Affairs)
+library(dplyr)
+## Rename variables to be consistent with the math above
+Affairs <- within(Affairs,{
+                  Y <- as.numeric(affairs > 0)
+                  X <- as.numeric(gender == "male")
+                  M <- age
+                  C <- as.numeric(children == "yes")
+              })
+## Logistic regression
+resLogit <- glm(formula = Y ~ X + M + M:X + C,
+                family  = binomial(link = "logit"),
+                data    = Affairs)
+
+@
+
+\subsection{DIY method for log OR and OR}
+<<size = "small">>=
+## Check variance covariance matrix
+vcov(resLogit)
+## Get variance estimates
+hatVarBeta1      <- vcov(resLogit)["X","X"]
+hatVarBeta3      <- vcov(resLogit)["X:M","X:M"]
+hatCovBeta1Beta3 <- vcov(resLogit)["X","X:M"]
+## Get coefficient estimates
+hatBeta1 <- coef(resLogit)["X"]
+hatBeta3 <- coef(resLogit)["X:M"]
+## Function to estimate the variance of OR depending on M
+varByM <- function(M) {
+    hatVarBeta3*M^2 + 2*hatCovBeta1Beta3*M + hatVarBeta1
+}
+## Function to estimate the log OR depending on M
+logOrByM <- function(M) {
+    hatBeta3*M + hatBeta1
+}
+## Create a dataset to predict for
+newdat <- expand.grid(X = 1,
+                      M = quantile(Affairs$M, probs = seq(0,1,0.01)),
+                      C = 0)
+newdat$fit     <- logOrByM(newdat$M)
+newdat$se.fit  <- varByM(newdat$M) %>% sqrt
+## 95% CI
+newdat$lower <- newdat$fit - 1.96 * newdat$se.fit
+newdat$upper <- newdat$fit + 1.96 * newdat$se.fit
+## Check data
+head(newdat, 10)
+## Plot log OR
+library(ggplot2)
+plotSkeleton <- ggplot(data = newdat, mapping = aes(x = M, y = fit, ymin = lower, ymax = upper)) +
+    layer(geom = "ribbon", fill = "gray", alpha = 0.1) +
+    layer(geom = "line") +
+    theme_bw() + theme(legend.key = element_blank())
+plotSkeleton + labs(title = "log OR")
+## Plot OR
+plotSkeleton + aes(y = exp(fit), ymin = exp(lower), ymax = exp(upper)) + labs(title = "OR")
+
+@
+
+
+\subsection{Using predict to obtain log odds and odds}
+
+\textbf{These are log odds and odds, \textit{i.e.} absolute measures, not effect estimates of $X$}.
+
+<<size = "footnotesize">>=
+## By using predict
+newdatPredict <- predict(resLogit, newdata = newdat, se.fit = TRUE)
+newdatPredict <- newdatPredict[c("fit","se.fit")] %>% data.frame
+newdatPredict$M <- newdat$M
+## 95% CI
+newdatPredict$lower <- newdatPredict$fit - 1.96 * newdatPredict$se.fit
+newdatPredict$upper <- newdatPredict$fit + 1.96 * newdatPredict$se.fit
+## Plot log odds
+plotSkeleton %+% newdatPredict + labs(title = "log odds")
+## Plot odds
+plotSkeleton %+% newdatPredict + aes(y = exp(fit), ymin = exp(lower), ymax = exp(upper)) + labs(title = "odds")
+
+@
+
+%% \subsection{predict() and subtraction to get at log OR and OR}
+
+%% \textbf{This is incorrect, the SE from the intercept parameter is counted twice.}
+
+%%<<size = "footnotesize">>=
+%%newdatX0 <- expand.grid(X = 0,
+%%                        M = quantile(Affairs$M, probs = seq(0,1,0.01)),
+%%                        C = 0)
+%%## By using predict
+%%newdatPredictX0 <- predict(resLogit, newdata = newdatX0, se.fit = TRUE)
+%%newdatPredictX0 <- newdatPredictX0[c("fit","se.fit")] %>% data.frame
+%%newdatPredictX0$M <- newdat$M
+%%## Subtract fit, add up se.fit
+%%newdat2 <- data.frame(fit = newdatPredict$fit - newdatPredictX0$fit,
+%%                      se.fit = newdatPredict$se.fit + newdatPredictX0$se.fit,
+%%                      M = newdat$M)
+%%## 95% CI
+%%newdat2$lower <- newdat2$fit - 1.96 * newdat2$se.fit
+%%newdat2$upper <- newdat2$fit + 1.96 * newdat2$se.fit
+%%## Plot log OR
+%%plotSkeleton %+% newdat2 + labs(title = "log OR")
+%%## Plot OR
+%%plotSkeleton %+% newdat2 + aes(y = exp(fit), ymin = exp(lower), ymax = exp(upper)) + labs(title = "OR")
+%%
+%%@
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\end{document}
