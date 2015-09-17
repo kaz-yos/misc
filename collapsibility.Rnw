@@ -1,0 +1,361 @@
+\documentclass{article}
+
+%% Templates
+%% http://www.latextemplates.com
+
+%% Margin
+%% \usepackage[margin=1.5cm]{geometry}
+\usepackage[margin=2.0cm]{geometry}
+%% \addtolength{\topmargin}{0.3cm}
+%% \addtolength{\textheight}{1.75in}
+
+%% Math
+\usepackage{amsmath}
+%% Allow new page within align
+\allowdisplaybreaks
+\usepackage{cancel}
+
+% % Code
+\usepackage{listings}
+\usepackage{courier}
+\lstset{basicstyle=\footnotesize\ttfamily, breaklines=true, frame=single}
+
+%% Graphics
+\usepackage{graphicx}
+
+%% DAG
+\usepackage{tikz}
+\usetikzlibrary{positioning,shapes.geometric}
+
+%% Date
+\usepackage[yyyymmdd]{datetime}
+\renewcommand{\dateseparator}{--}
+
+%% Header
+\usepackage{fancyhdr}
+\pagestyle{fancy}
+\fancyhf{} % Erase first to supress section names
+\fancyhead[L]{Kazuki Yoshida} % LEFT
+\fancyhead[C]{Collapsibility} % CENTER
+\fancyhead[R]{\today} % RIGHT
+\fancyfoot[C]{\thepage}
+%% \fancyfoot[R]{Page \thepage\ of \pageref{LastPage}}
+
+%% Section font size
+\usepackage{sectsty}
+\sectionfont{\small}
+\subsectionfont{\small}
+\subsubsectionfont{\small}
+
+%% Section numbering
+%% http://tex.stackexchange.com/questions/3177/how-to-change-the-numbering-of-part-chapter-section-to-alphabetical-r
+%% \renewcommand\thesection{\alph{section}}
+%% \renewcommand\thesubsection{\thesection.\arabic{subsection}}
+%% \renewcommand{\thesubsubsection}{\thesubsection.\alph{subsubsection}}
+%%
+%% http://tex.stackexchange.com/questions/40067/numbering-sections-with-sequential-integers
+%% \usepackage{chngcntr}
+%% \counterwithout{subsection}{section}
+
+%% enumerate
+\usepackage{enumerate}
+
+%% double space
+%% \usepackage{setspace}
+%% \linespread{2}
+
+%% Paragraph Indentation
+\usepackage{indentfirst}
+\setlength{\parindent}{4em}
+
+%% Spacing after headings
+%% http://tex.stackexchange.com/questions/53338/reducing-spacing-after-headings
+\usepackage{titlesec}
+\titlespacing      \section{0pt}{12pt plus 4pt minus 2pt}{0pt plus 2pt minus 2pt}
+\titlespacing   \subsection{0pt}{12pt plus 4pt minus 2pt}{0pt plus 2pt minus 2pt}
+\titlespacing\subsubsection{0pt}{12pt plus 4pt minus 2pt}{0pt plus 2pt minus 2pt}
+
+\begin{document}
+<<message = FALSE, tidy = FALSE, echo = F>>=
+## knitr configuration: http://yihui.name/knitr/options#chunk_options
+showMessage <- FALSE
+showWarning <- TRUE
+set_alias(w = "fig.width", h = "fig.height", res = "results")
+opts_chunk$set(comment = "##", error= TRUE, warning = showWarning, message = showMessage,
+               tidy = FALSE, cache = F, echo = T,
+               fig.width = 5, fig.height = 5, dev.args = list(family = "sans"))
+knit_hooks$set(rgl = hook_rgl)
+rnd <- function(x, digits = 2) {sprintf(fmt = paste0("%.", digits,"f"), x)}
+
+@
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+<<size = "small", echo = FALSE>>=
+library(magrittr)
+
+@
+
+\section{Collapsibility and generalized linear model}
+
+
+\textbf{References}
+
+\begin{itemize}
+  \item Harvard Schan School BIO233 note page 233\\
+  \item Greenland et al. Confounding and collapsibility in causal inference. Statistical Sicence 1999;14:29-46.
+  \item
+\end{itemize}
+
+
+Demonstrates if the effect measure of interest is collapsible over variable $Z$, which is may be a predictor, but is independent of $X$ ($Z \coprod X$).
+
+\begin{align*}
+  &\textnormal{Conditional model conditioning on Z}\\
+  g(E[Y|X,Z]) &= \beta_0 + \beta_1 X + \beta_2 Z\\
+  E[Y|X,Z] &= h(\beta_0 + \beta_1 X + \beta_2 Z)\\
+  \\
+  &\textnormal{Marginal model}\\
+  g(E[Y|X]) &= \beta_0^* + \beta_1^* X\\
+  E[Y|X] &= h(\beta_0^* + \beta_1^* X)\\
+  \\
+  &\textnormal{where}\\
+  g(\cdot) & \textnormal{Link function}\\
+  h(\cdot) & \textnormal{Inverse link function}\\
+\end{align*}
+
+
+
+\newpage
+\subsection{Identity link}
+
+\begin{align*}
+  &\textnormal{Weighted mean to marginalize as to $Z$}\\
+  E[Y|X] &= \underset{z}{\int} E[Y|Z,X] f_{Z|X}(Z=z|X) \textnormal{d}z\\
+  &\textnormal{Inverse of identity is identity}\\
+  &= \underset{z}{\int} (\beta_0 + \beta_1 X + \beta_2 Z) f_{Z|X}(Z=z|X) \textnormal{d}z\\
+  &\textnormal{Weighted mean of a constant is a constant}\\
+  &= \beta_0 + \underset{z}{\int} (\beta_1 X + \beta_2 Z) f_{Z|X}(Z=z|X) \textnormal{d}z\\
+  &\textnormal{Conditional on $X$, $X$ and $\beta_1 X$ is a constant}\\
+  &= \beta_0 + \beta_1 X + \underset{z}{\int} (\beta_2 Z) f_{Z|X}(Z=z|X) \textnormal{d}z\\
+  &\textnormal{Last term is expectation of $Z$ conditional on $X$}\\
+  &= \beta_0 + \beta_1 X + \beta_2 E[Z|X]\\
+  &\textnormal{If $Z \coprod X$, conditional expectation = marginal}\\
+  &= \beta_0 + \beta_1 X + \beta_2 E[Z]\\
+  &\textnormal{Collect constants}\\
+  &= (\beta_0 + \beta_2 E[Z]) + \beta_1 X\\
+  &\textnormal{This expression has same form as marginal model}\\
+  &= \beta_0^* + \beta_1^* X\\
+  &\textnormal{Thus,}\\
+  &\left\{
+  \begin{aligned}
+    \beta_0^* &= \beta_0 + \beta_2 E[Z]\\
+    \beta_1^* &= \beta_1\\
+  \end{aligned}
+  \right .
+\end{align*}
+
+
+\newpage
+\subsection{Identity link (with effect modification by binary $Z$)}
+
+\begin{align*}
+  &\textnormal{Weighted mean to marginalize as to $Z$}\\
+  E[Y|X] &= \underset{z}{\int} E[Y|Z,X] f_{Z|X}(Z=z|X) \textnormal{d}z\\
+  &\textnormal{Inverse of identity is identity}\\
+  &= \underset{z}{\int} (\beta_0 + \beta_1 X + \beta_2 Z + \beta_3 XZ) f_{Z|X}(Z=z|X) \textnormal{d}z\\
+  &\textnormal{Weighted mean of a constant is a constant}\\
+  &= \beta_0 + \underset{z}{\int} (\beta_1 X + \beta_2 Z + \beta_3 XZ) f_{Z|X}(Z=z|X) \textnormal{d}z\\
+  &\textnormal{Conditional on $X$, $X$ and $\beta_1 X$ is a constant}\\
+  &= \beta_0 + \beta_1 X + \underset{z}{\int} (\beta_2 Z + \beta_3 XZ) f_{Z|X}(Z=z|X) \textnormal{d}z\\
+  &\textnormal{Second last term is expectation of $Z$ conditional on $X$}\\
+  &= \beta_0 + \beta_1 X + \beta_2 E[Z|X] + \underset{z}{\int} (\beta_3 XZ) f_{Z|X}(Z=z|X) \textnormal{d}z\\
+  &\textnormal{If $Z \coprod X$, conditional expectation = marginal}\\
+  &= \beta_0 + \beta_1 X + \beta_2 E[Z] + \underset{z}{\int} (\beta_3 XZ) f_{Z|X}(Z=z|X) \textnormal{d}z\\
+  &\textnormal{By similar logic}\\
+  &= \beta_0 + \beta_1 X + \beta_2 E[Z] + \beta_3 X E[Z|X]\\
+  &= \beta_0 + \beta_1 X + \beta_2 E[Z] + \beta_3 X E[Z]\\
+  &\textnormal{Collect constants and $X$ terms}\\
+  &= (\beta_0 + \beta_2 E[Z]) + (\beta_1 + \beta_3 E[Z]) X\\
+  &\textnormal{If $Z$ is binary}\\
+  &= (\beta_0 + \beta_2 E[Z]) + (\beta_1(1-E[Z]) + (\beta_1 + \beta_3)E[Z]) X\\
+  &\textnormal{This expression has same form as marginal model}\\
+  &= \beta_0^* + \beta_1^* X\\
+  &\textnormal{Thus,}\\
+  &\left\{
+  \begin{aligned}
+    \beta_0^* &= \beta_0 + \beta_2 E[Z]\\
+    \beta_1^* &= \beta_1(1-E[Z]) + (\beta_1 + \beta_3)E[Z]\\
+  \end{aligned}
+  \right .
+\end{align*}
+
+Therefore, the marginal effect of $X$, $\beta_1^*$ is the weighted average of the stratum-specific effects of $X$, $\beta_1$ for $Z=0$ and $\beta_1 + \beta_3$ for $Z=1$ weighted by the prevalence of $Z=0$ and $Z=1$, respectively.
+
+
+\newpage
+\subsection{Log link}
+
+\begin{align*}
+  &\textnormal{Weighted mean to marginalize as to $Z$}\\
+  E[Y|X] &= \underset{z}{\int} E[Y|Z,X] f_{Z|X}(Z=z|X) \textnormal{d}z\\
+  &\textnormal{Inverse of log is exp}\\
+  &= \underset{z}{\int} e^{(\beta_0 + \beta_1 X + \beta_2 Z)} f_{Z|X}(Z=z|X) \textnormal{d}z\\
+  &\textnormal{Decompose into a product}\\
+  &= \underset{z}{\int} e^{\beta_0}e^{\beta_1 X}e^{\beta_2 Z} f_{Z|X}(Z=z|X) \textnormal{d}z\\
+  &\textnormal{Weighted mean of a transformed constant is a constant}\\
+  &= e^{\beta_0} \underset{z}{\int} e^{\beta_1 X}e^{\beta_2 Z} f_{Z|X}(Z=z|X) \textnormal{d}z\\
+  &\textnormal{Conditional on $X$, $X$ and $\beta_1 X$ is a constant}\\
+  &= e^{\beta_0} e^{\beta_1 X} \underset{z}{\int} e^{\beta_2 Z} f_{Z|X}(Z=z|X) \textnormal{d}z\\
+  &\textnormal{Last term is expectation of $e^{\beta_2 Z}$ conditional on $X$}\\
+  &= e^{\beta_0} e^{\beta_1 X} E[e^{\beta_2 Z}|X]\\
+  &\textnormal{If $Z \coprod X$, conditional expectation = marginal}\\
+  &= e^{\beta_0} e^{\beta_1 X} E[e^{\beta_2 Z}]\\
+  &\textnormal{Collect constants}\\
+  &= (e^{\beta_0}E[e^{\beta_2 Z}]) e^{\beta_1 X} \\
+  &\textnormal{This expression has same form as marginal model}\\
+  &= e^{(\beta_0^* + \beta_1^* X)} = e^{\beta_0^*}e^{\beta_1^* X}\\
+  &\textnormal{Thus,}\\
+  &\left\{
+  \begin{aligned}
+    e^{\beta_0^*} &= e^{\beta_0}E[e^{\beta_2 Z}]\\
+    \beta_1^* &= \beta_1\\
+  \end{aligned}
+  \right .
+\end{align*}
+
+
+\newpage
+\subsection{Logit link}
+
+\begin{align*}
+  &\textnormal{Weighted mean to marginalize as to $Z$}\\
+  E[Y|X] &= \underset{z}{\int} E[Y|Z,X] f_{Z|X}(Z=z|X) \textnormal{d}z\\
+  &\textnormal{Inverse of logit is expit}\\
+  &= \underset{z}{\int} expit(\beta_0 + \beta_1 X + \beta_2 Z) f_{Z|X}(Z=z|X) \textnormal{d}z\\
+  &= \underset{z}{\int} \frac{e^{\beta_0 + \beta_1 X + \beta_2 Z}}{1+e^{\beta_0 + \beta_1 X + \beta_2 Z}} f_{Z|X}(Z=z|X) \textnormal{d}z\\
+  &= \underset{z}{\int} \frac{e^{\beta_0}e^{\beta_1 X}e^{\beta_2 Z}}{1+e^{\beta_0}e^{\beta_1 X}e^{\beta_2 Z}} f_{Z|X}(Z=z|X) \textnormal{d}z\\
+  &\textnormal{Weighted mean of a transformed constant is a constant}\\
+  &= e^{\beta_0}\underset{z}{\int} \frac{e^{\beta_1 X}e^{\beta_2 Z}}{1+e^{\beta_0}e^{\beta_1 X}e^{\beta_2 Z}} f_{Z|X}(Z=z|X) \textnormal{d}z\\
+  &\textnormal{Conditional on $X$, $X$ and $\beta_1 X$ is a constant}\\
+  &= e^{\beta_0}e^{\beta_1 X} \underset{z}{\int} \frac{e^{\beta_2 Z}}{1+(e^{\beta_0}e^{\beta_1 X})e^{\beta_2 Z}} f_{Z|X}(Z=z|X) \textnormal{d}z\\
+  &= e^{\beta_0}e^{\beta_1 X} E\left[ \frac{e^{\beta_2 Z}}{1+(e^{\beta_0}e^{\beta_1 X})e^{\beta_2 Z}} | X \right]\\
+  &\textnormal{No further transformation is possible}\\
+  &\textnormal{This expression does not have same form as marginal model}\\
+  &\ne \frac{e^{\beta_0^*}e^{\beta_1^* X}}{1+e^{\beta_0^*}e^{\beta_1^* X}}\\
+\end{align*}
+
+There is no way to separate $\beta_1$ and $\beta_2$ in the denominator because we cannot apply the expectation to the denominator only, and it is not possible to transform this to the form of the marginal model.
+
+
+\newpage
+\subsection{Log link (rate with varying observation time $T$)}
+
+I am not really sure about this one.
+
+\begin{align*}
+  &\textnormal{Weighted mean to marginalize as to $Z$}\\
+  E[Y|X] &= \underset{z}{\int} E[Y|Z,X] f_{Z|X}(Z=z|X) \textnormal{d}z\\
+  &\textnormal{Inverse of log is exp}\\
+  &= \underset{z}{\int} e^{(\beta_0 + \beta_1 X + \beta_2 Z + log(T))} f_{Z|X}(Z=z|X) \textnormal{d}z\\
+  &\textnormal{Decompose into a product}\\
+  &= \underset{z}{\int} e^{\beta_0}e^{\beta_1 X}e^{\beta_2 Z}T f_{Z|X}(Z=z|X) \textnormal{d}z\\
+  &\textnormal{Weighted mean of a transformed constant is a constant}\\
+  &= e^{\beta_0} \underset{z}{\int} e^{\beta_1 X}e^{\beta_2 Z}T f_{Z|X}(Z=z|X) \textnormal{d}z\\
+  &\textnormal{Conditional on $X$, $X$ and $\beta_1 X$ is a constant}\\
+  &= e^{\beta_0} e^{\beta_1 X} \underset{z}{\int} e^{\beta_2 Z}T f_{Z|X}(Z=z|X) \textnormal{d}z\\
+  &\textnormal{Last term is expectation of $e^{\beta_2 Z}T$ conditional on $X$}\\
+  &= e^{\beta_0} e^{\beta_1 X} E[e^{\beta_2 Z}T|X]\\
+  &\textnormal{$Z \coprod X$ is insufficient to make $E[e^{\beta_2 Z}T|X]$ independent of $X$}\\
+  &\textnormal{This expression does not have same form as marginal model}\\
+  &\ne e^{\beta_0^*}e^{\beta_1^* X}T \\
+\end{align*}
+
+If the observation time $T$ is the same for all observations (constant; essentially just count data), then $T$ can come out of $E[e^{\beta_2 Z}T|X]$, and the expression conform to the marginal model expression.
+
+
+\newpage
+\section{Collapsibility and (generalized) linear mixed model}
+
+The marginal model for correlated data and the mixed model are compared.
+
+
+\textbf{References}
+
+\begin{itemize}
+  \item Applied Longitudinal Analysis. http://www.hsph.harvard.edu/fitzmaur/ala2e/
+\end{itemize}
+
+
+\begin{align*}
+  &\textnormal{Mixed effects model conditioning on random effects $b_i$}\\
+  g(E[Y_i|X_i,b_i]) &= X_i \beta + Z_i b_i\\
+  E[Y_i|X_i,b_i] &= h(X_i \beta + Z_i b_i)\\
+  \\
+  &\textnormal{Marginal model}\\
+  g(E[Y_i|X_i]) &= X_i \beta^*\\
+  E[Y_i|X_i] &= h(X_i \beta^*)\\
+  \\
+  &\textnormal{where}\\
+  g(\cdot) & \textnormal{Link function}\\
+  h(\cdot) & \textnormal{Inverse link function}\\
+\end{align*}
+
+
+
+\subsection{Identity link}
+
+\begin{align*}
+  &\textnormal{Marginalizing over random effects $b_i$ yields marginal model}\\
+  E[Y_i | X_i] &= E[ E[Y_i | X_i, b_i] ]\\  
+  &\textnormal{Inverse of identity is identity}\\
+  &= E[ X_i \beta + Z_i b_i ]\\
+  &\textnormal{Data and fixed parameters are constant}\\
+  &= X_i \beta + Z_i E[ b_i ]\\
+  &\textnormal{$E[ b_i ]$ is defined as 0}\\
+  &= X_i \beta + Z_i (0)\\
+  &= X_i \beta\\
+  &\textnormal{This expression has same form as marginal model}\\
+  &= X_i \beta^*\\
+  &\textnormal{Thus, conditional effect = marginal effect}\\
+  \beta^* &= \beta\\
+\end{align*}
+
+
+\subsection{Nonlinear link}
+
+\begin{align*}
+  &\textnormal{Marginalizing over random effects $b_i$ yields marginal model}\\
+  E[Y_i | X_i] &= E[ E[Y_i | X_i, b_i] ]\\
+  &\textnormal{Inverse of $g(\cdot)$ is $h(\cdot)$}\\
+  &= E[ h(X_i \beta + Z_i b_i) ]\\
+  &\textnormal{If the link is not identity, $E[\cdot]$ cannot go into $h(\cdot)$}\\
+  &\ne h(E[X_i \beta + Z_i b_i])\\
+  &\textnormal{Thus, we cannot obtain $E[b_i]=0$. No further transformtion}\\
+\end{align*}
+
+
+\subsection{Log link special case}
+
+The log link is another special case. The conditional coefficients for variables that do not have random effects (Only in $X_i$, but not in $Z_i$) are equivalent to the corresponding coefficients in the marginal model.
+
+%% \begin{align*}
+%%   &\textnormal{Marginalizing over random effects $b_i$ yields marginal model}\\
+%%   E[Y_i | X_i] &= E[ E[Y_i | X_i, b_i] ]\\
+%%   &\textnormal{Inverse of $log(\cdot)$ is $exp(\cdot)$}\\
+%%   &= E[ e^{(X_i \beta + Z_i b_i)} ]\\
+%%   &\textnormal{Evaluation is via integration over $b_i$}\\
+%%   &= \int_{-\infty}^{\infty} e^{(X_i \beta + Z_i b_i)} f(b_i) \textnormal{d}b_i\\
+%%   &\textnormal{Express as a product}\\
+%%   &= \int_{-\infty}^{\infty} e^{X_i \beta} e^{Z_i b_i} f(b_i) \textnormal{d}b_i\\
+%%   &\textnormal{Data and fixed parameters are constant}\\
+%%   &= e^{X_i \beta} \int_{-\infty}^{\infty} e^{Z_i b_i} f(b_i) \textnormal{d}b_i\\
+%% \end{align*}
+
+
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%% https://www.sharelatex.com/learn/Bibtex_bibliography_styles
+%% \bibliographystyle{ieeetr}
+%% \bibliography{bib_file_name}
+\end{document}
