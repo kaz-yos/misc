@@ -1,0 +1,174 @@
+\documentclass{article}
+
+%% Templates
+%% http://www.latextemplates.com
+
+%% Margin
+%% \usepackage[margin=1.5cm]{geometry}
+\usepackage[top=2cm, bottom=2cm, left=2cm, right=2cm, headsep=4pt]{geometry}
+%% \addtolength{\topmargin}{0.3cm}
+%% \addtolength{\textheight}{1.75in}
+
+%% Math
+\usepackage{amsmath}
+\usepackage{amssymb}
+\usepackage{wasysym}
+\newcommand{\ind}{\mathrel{\text{\scalebox{1.07}{$\perp\mkern-10mu\perp$}}}}
+%% Allow new page within align
+\allowdisplaybreaks
+\usepackage{cancel}
+
+% % Code
+\usepackage{listings}
+\usepackage{courier}
+\lstset{basicstyle=\footnotesize\ttfamily, breaklines=true, frame=single}
+
+%% Graphics
+\usepackage{graphicx}
+
+%% DAG
+\usepackage{tikz}
+\usetikzlibrary{positioning,shapes.geometric}
+
+%% Date
+\usepackage[yyyymmdd]{datetime}
+\renewcommand{\dateseparator}{--}
+
+%% Header
+\usepackage{fancyhdr}
+\pagestyle{fancy}
+\fancyhf{} % Erase first to supress section names
+\fancyhead[L]{Kazuki Yoshida} % LEFT
+\fancyhead[C]{Distributions} % CENTER
+\fancyhead[R]{\today} % RIGHT
+\fancyfoot[C]{\thepage}
+%% \fancyfoot[R]{Page \thepage\ of \pageref{LastPage}}
+
+%% Section font size
+\usepackage{sectsty}
+\sectionfont{\small}
+\subsectionfont{\small}
+\subsubsectionfont{\small}
+
+%% Section numbering
+%% http://tex.stackexchange.com/questions/3177/how-to-change-the-numbering-of-part-chapter-section-to-alphabetical-r
+%% \renewcommand\thesection{\alph{section}}
+%% \renewcommand\thesubsection{\thesection.\arabic{subsection}}
+%% \renewcommand{\thesubsubsection}{\thesubsection.\alph{subsubsection}}
+%%
+%% http://tex.stackexchange.com/questions/40067/numbering-sections-with-sequential-integers
+%% \usepackage{chngcntr}
+%% \counterwithout{subsection}{section}
+
+%% enumerate
+\usepackage{enumerate}
+
+%% double space
+%% \usepackage{setspace}
+%% \linespread{2}
+
+%% Paragraph Indentation
+\usepackage{indentfirst}
+\setlength{\parindent}{4em}
+
+%% Spacing after headings
+%% http://tex.stackexchange.com/questions/53338/reducing-spacing-after-headings
+\usepackage{titlesec}
+\titlespacing      \section{0pt}{12pt plus 4pt minus 2pt}{0pt plus 2pt minus 2pt}
+\titlespacing   \subsection{0pt}{12pt plus 4pt minus 2pt}{0pt plus 2pt minus 2pt}
+\titlespacing\subsubsection{0pt}{12pt plus 4pt minus 2pt}{0pt plus 2pt minus 2pt}
+
+%% Fix figures and tables by [H]
+\usepackage{float}
+
+\textmd{}%% Allow URL embedding
+\usepackage{url}
+
+\begin{document}
+<<message = FALSE, tidy = FALSE, echo = F>>=
+## knitr configuration: http://yihui.name/knitr/options#chunk_options
+library(knitr)
+showMessage <- FALSE
+showWarning <- TRUE
+set_alias(w = "fig.width", h = "fig.height", res = "results")
+opts_chunk$set(comment = "##", error= TRUE, warning = showWarning, message = showMessage,
+               tidy = FALSE, cache = F, echo = T,
+               fig.width = 5, fig.height = 5, dev.args = list(family = "sans"))
+## library(rgl)
+## knit_hooks$set(rgl = hook_rgl)
+rnd <- function(x, digits = 2) {sprintf(fmt = paste0("%.", digits,"f"), x)}
+
+@
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\section{Hypergeometric}
+
+\url{http://planetmath.org/proofofvarianceofthehypergeometricdistribution}
+
+\begin{align*}
+  &~~~\text{pmf}\\
+  f(x; N,M,K) &= \frac{{{M}\choose{x}} {{N-M}\choose{K-x}}}{{{N}\choose{K}}}\\
+  \\
+  &~~~\text{Expected value}\\
+  E[X] &= \sum^{K}_{x=0} x f(x; N,M,K)\\
+  &= \sum^{K}_{x=1} x f(x; N,M,K)\\
+  &= \sum^{K}_{x=1} x \frac{{{M}\choose{x}} {{N-M}\choose{K-x}}}{{{N}\choose{K}}}\\
+  &= \sum^{K}_{x=1} \frac{\left( x{{M}\choose{x}} \right) {{N-M}\choose{K-x}}}{{{N}\choose{K}}}\\
+  &~~~\text{Using } x\frac{M!}{x!(M-x)!} = M\frac{(M-1)!}{(x-1)!(M-x)!}\\
+  &~~~\text{and } \frac{N!}{K!(N-K)!} = \frac{N}{K} \frac{(N-1)!}{(K-1)!(N-K)!}\\
+  &= \sum^{K}_{x=1} \frac{\left( M{{M-1}\choose{x-1}} \right) {{N-M}\choose{K-x}}}{\frac{N}{K}{{N-1}\choose{K-1}}}\\
+  &= \frac{MK}{N} \sum^{K}_{x=1} \frac{{{M-1}\choose{x-1}} {{N-M}\choose{K-x}}}{{{N-1}\choose{K-1}}}\\
+  &~~~\text{Using } y = x-1\\
+  &= \frac{MK}{N} \sum^{K-1}_{y=0} \frac{{{M-1}\choose{y}} {{N-M}\choose{K-(y+1)}}}{{{N-1}\choose{K-1}}}\\
+  &= \frac{MK}{N} \sum^{K-1}_{y=0} f(y; N-1, M-1, K-1)\\
+  &= \frac{MK}{N} F(Y=K-1; N-1, M-1, K-1)\\
+  &= \frac{MK}{N} (1)\\
+  &= \frac{MK}{N}\\
+  \\
+  E[X^2] &= \sum^{K}_{x=0} x^2 f(x; N,M,K)\\
+  &= \sum^{K}_{x=1} x^2 f(x; N,M,K)\\
+  &= \sum^{K}_{x=1} x^2 \frac{{{M}\choose{x}} {{N-M}\choose{K-x}}}{{{N}\choose{K}}}\\
+  &= \sum^{K}_{x=1} x\frac{\left( M{{M-1}\choose{x-1}} \right) {{N-M}\choose{K-x}}}{\frac{N}{K}{{N-1}\choose{K-1}}}\\
+  &= \frac{MK}{N} \sum^{K}_{x=1} x\frac{{{M-1}\choose{x-1}} {{N-M}\choose{K-x}}}{{{N-1}\choose{K-1}}}\\
+  &= \frac{MK}{N} \sum^{K}_{x=1}
+    \left[
+    (x-1)\frac{{{M-1}\choose{x-1}} {{N-M}\choose{K-x}}}{{{N-1}\choose{K-1}}} +
+    \frac{{{M-1}\choose{x-1}} {{N-M}\choose{K-x}}}{{{N-1}\choose{K-1}}}
+    \right]\\
+  &= \frac{MK}{N} \sum^{K}_{x=1} (x-1)\frac{{{M-1}\choose{x-1}} {{N-M}\choose{K-x}}}{{{N-1}\choose{K-1}}} +
+    \frac{MK}{N} \sum^{K}_{x=1} \frac{{{M-1}\choose{x-1}} {{N-M}\choose{K-x}}}{{{N-1}\choose{K-1}}}\\
+  &~~~\text{Last term is 1 as previously shown}\\
+  &= \frac{MK}{N} + \frac{MK}{N} \sum^{K}_{x=1} (x-1)\frac{{{M-1}\choose{x-1}} {{N-M}\choose{K-x}}}{{{N-1}\choose{K-1}}}\\
+  &~~~\text{Index can start at $x=2$ because at $x=1$ it is 0}\\
+  &= \frac{MK}{N} + \frac{MK}{N} \sum^{K}_{x=2} (x-1)\frac{{{M-1}\choose{x-1}} {{N-M}\choose{K-x}}}{{{N-1}\choose{K-1}}}\\
+  &~~~\text{Using } (x-1) \frac{(M-1)!}{(x-1)!(M-x)!} = (M-1) \frac{(M-2)!}{(x-2)!(M-x)!}\\
+  &~~~\text{and } \frac{(N-1)!}{(K-1)!(N-K)!} = \frac{N-1}{K-1} \frac{(N-2)!}{(K-2)!(N-K)!}\\
+  &= \frac{MK}{N} + \frac{MK}{N} \sum^{K}_{x=2}
+    \frac{(M-1){{M-2}\choose{x-2}} {{N-M}\choose{K-x}}}
+    {\frac{N-1}{K-1} {{N-2}\choose{K-2}}}\\
+  &= \frac{MK}{N} + \frac{MK}{N} \frac{(M-1)(K-1)}{N-1} \sum^{K}_{x=2}
+    \frac{{{M-2}\choose{x-2}} {{N-M}\choose{K-x}}}
+    {{{N-2}\choose{K-2}}}\\
+  &\text{Using $z=x-2$}\\
+  &= \frac{MK}{N} + \frac{MK}{N} \frac{(M-1)(K-1)}{N-1} \sum^{K-2}_{z=0}
+    \frac{{{M-2}\choose{z}} {{N-M}\choose{K-(x+2)}}}
+    {{{N-2}\choose{K-2}}}\\
+  &= \frac{MK}{N} + \frac{MK}{N} \frac{(M-1)(K-1)}{N-1} \sum^{K-2}_{z=0} f(x; N-2,M-2,K-2)\\
+  &= \frac{MK}{N} + \frac{MK}{N} \frac{(M-1)(K-1)}{N-1}\\
+  \\
+  Var(X) &= E[X^2] - (E[X])^2\\
+  &= \frac{MK}{N} + \frac{MK}{N} \frac{(M-1)(K-1)}{N-1} - \left( \frac{MK}{N} \right)^2\\
+  &= \frac{MK}{N} \left[ 1 + \frac{(M-1)(K-1)}{N-1} - \frac{MK}{N} \right]\\
+  &= \frac{MK}{N}\frac{1}{N(N-1)} \left[ N(N-1) + N(M-1)(K-1) - MK(N-1) \right]\\
+  &= \frac{MK}{N}\frac{1}{N(N-1)} [N^2 - N + NMK - NK - NM + N - NMK + MK]\\
+  &= \frac{MK}{N}\frac{1}{N(N-1)} [N^2 - NK - NM + MK]\\
+  &= \frac{MK}{N}\frac{1}{N(N-1)} (N-K)(N-M)\\
+  &= \frac{MK}{N}\frac{(N-K)(N-M)}{N(N-1)}\\
+\end{align*}
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%% https://www.sharelatex.com/learn/Bibtex_bibliography_styles
+%% \bibliographystyle{ieeetr}
+%% \bibliography{bib_file_name}
+\end{document}
