@@ -1,0 +1,358 @@
+\documentclass{article}
+
+%% Templates
+%% http://www.latextemplates.com
+
+%% Margin
+%% \usepackage[margin=1.5cm]{geometry}
+\usepackage[top=2cm, bottom=2cm, left=2cm, right=2cm, headsep=4pt]{geometry}
+%% \addtolength{\topmargin}{0.3cm}
+%% \addtolength{\textheight}{1.75in}
+
+%% Math
+\usepackage{amsmath}
+\usepackage{amssymb}
+\usepackage{wasysym}
+\newcommand{\ind}{\mathrel{\text{\scalebox{1.07}{$\perp\mkern-10mu\perp$}}}}
+%% Allow new page within align
+\allowdisplaybreaks
+\usepackage{cancel}
+
+% % Code
+\usepackage{listings}
+\usepackage{courier}
+\lstset{basicstyle=\footnotesize\ttfamily, breaklines=true, frame=single}
+
+%% Graphics
+\usepackage{graphicx}
+
+%% DAG
+\usepackage{tikz}
+\usetikzlibrary{positioning,shapes.geometric}
+
+%% Date
+\usepackage[yyyymmdd]{datetime}
+\renewcommand{\dateseparator}{--}
+
+%% Header
+\usepackage{fancyhdr}
+\pagestyle{fancy}
+\fancyhf{} % Erase first to supress section names
+\fancyhead[L]{Octavious Talbot \& Kazuki Yoshida} % LEFT
+\fancyhead[C]{Multiple Imputation} % CENTER
+\fancyhead[R]{\today} % RIGHT
+\fancyfoot[C]{\thepage}
+%% \fancyfoot[R]{Page \thepage\ of \pageref{LastPage}}
+
+%% Section font size
+\usepackage{sectsty}
+\sectionfont{\small}
+\subsectionfont{\small}
+\subsubsectionfont{\small}
+
+%% Section numbering
+%% http://tex.stackexchange.com/questions/3177/how-to-change-the-numbering-of-part-chapter-section-to-alphabetical-r
+%% \renewcommand\thesection{\alph{section}}
+%% \renewcommand\thesubsection{\thesection.\arabic{subsection}}
+%% \renewcommand{\thesubsubsection}{\thesubsection.\alph{subsubsection}}
+%%
+%% http://tex.stackexchange.com/questions/40067/numbering-sections-with-sequential-integers
+%% \usepackage{chngcntr}
+%% \counterwithout{subsection}{section}
+
+%% enumerate
+\usepackage{enumerate}
+
+%% double space
+\usepackage{setspace}
+\linespread{2.00}
+
+%% Paragraph Indentation
+\usepackage{indentfirst}
+\setlength{\parindent}{0em}
+
+%% Spacing after headings
+%% http://tex.stackexchange.com/questions/53338/reducing-spacing-after-headings
+\usepackage{titlesec}
+\titlespacing      \section{0pt}{12pt plus 4pt minus 2pt}{0pt plus 2pt minus 2pt}
+\titlespacing   \subsection{0pt}{12pt plus 4pt minus 2pt}{0pt plus 2pt minus 2pt}
+\titlespacing\subsubsection{0pt}{12pt plus 4pt minus 2pt}{0pt plus 2pt minus 2pt}
+
+%% Fix figures and tables by [H]
+\usepackage{float}
+
+%% Allow URL embedding
+\usepackage{url}
+
+%% Include GrandMacro.tex
+\include{GrandMacros}
+
+
+\begin{document}
+<<message = FALSE, tidy = FALSE, echo = F>>=
+## knitr configuration: http://yihui.name/knitr/options#chunk_options
+library(knitr)
+showMessage <- FALSE
+showWarning <- TRUE
+set_alias(w = "fig.width", h = "fig.height", res = "results")
+opts_chunk$set(comment = "##", error= TRUE, warning = showWarning, message = showMessage,
+               tidy = FALSE, cache = F, echo = T,
+               fig.width = 5, fig.height = 5, dev.args = list(family = "sans"))
+## library(rgl)
+## knit_hooks$set(rgl = hook_rgl)
+rnd <- function(x, digits = 2) {sprintf(fmt = paste0("%.", digits,"f"), x)}
+
+@
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\noindent
+This document was created by students to fulfill a course requirement. Be aware of potential errors, and check with the original papers. The corresponding presentation file is at \url{http://www.slideshare.net/kaz_yos/multiple-imputation-joint-and-conditional-modeling-of-missing-data} and code example is at \url{http://rpubs.com/kaz_yos/mi-examples}.
+
+\section{Introduction}
+
+Missing data are an omnipresent problem that affects almost all real data set of substantial size. Complete case analysis (dropping any observations for which missing data exist) is often the default behavior of statistical packages, resulting in unconscious adoption of this option by many researchers. More sophisticated missing data handling methods are becoming more well-known and are being adopted in recent years. Such methods include inverse probability weighting, likelihood-based approaches, and multiple imputation.
+
+Multiple imputation is becoming particularly popular, therefore, we will focus our discussion on this method. Roughly speaking there are two schools of thoughts in conducting multiple imputation. One is the “joint distribution” approach and the other is “conditional distribution” approach. Here we provide a brief overview of missing data methods, review in detail the two approaches to multiple imputation, and examine software packages implementing these methods.
+
+
+\section{Missing data mechanism}
+
+Consideration of the underlying mechanisms that gave rise to missing data is important in handling missing data appropriately \cite{little_statistical_2002}. Most importantly, assumptions have to be made as to whether the fact some variables are missing is related to the unobserved values themselves. The terms used to describe the assumptions are Missing Completely At Random (MCAR), Missing At Random (MAR), and Not Missing At Random (NMAR; sometimes also Missing Not At Random, MNAR) as coined by Rubin \cite{rubin_inference_1976}.
+
+Let $\bY$ be the data matrix containing all data both observed and unobserved (missing) in reality. Following the biostatistics convention rows indexed by $i$ are observations (often individuals) and the columns indexed by $j$ are variables. Let $\bM$ be the missing-data indicator matrix. That is, the entry $M_{ij}$ is 1 if the corresponding entry in the $\bY$ matrix ($Y_{ij}$) is in fact missing in reality. It is 0 if the corresponding entry is observed. The conditional distribution of the missing indicator matrix $\bM$ given the underlying data $\bY$, for example $f(\bM | \bY, \phi)$ where $\phi$ characterizes the missing mechanism and is the unknown  is used to formally define missing data mechanisms \cite{little_statistical_2002}.
+
+The MCAR missingness mechanism is defined as follows.
+
+\begin{center}
+  $f(\bM | \bY, \phi) = f(\bM | \phi) ~~\forall~~\bY, \phi$
+\end{center}
+
+
+This expression implies that the missing data model that created the missing data does not actually depend on the true values of $\bY$ either observed or unobserved. Assuming MCAR is a rather strong assumption, however, it may be reasonable in some circumstances. This can occur by design, for example, conducting a detailed questionnaire among a random subset of the entire sample. If MCAR can be assumed, subsequent analyses are straightforward because observations that do not have missing variables (“complete” rows of $\bY$) are essentially a random sample of the entire observations (all rows of $\bY$). Notice the probability of having missingness is a constant related to $\phi$ for every observation (row) in the data set in this case.
+
+A less restrictive mechanism, MAR is defined as follows. Let $\bY_{\text{obs}}$ be the observed components of $\bY$ and  $\bY_{\text{mis}}$ be the missing components.
+
+\begin{center}
+  $f(\bM | \bY, \phi) = f(\bM | \bY_{\text{obs}}, \phi) ~~\forall~~\bY_{\text{mis}}, \phi$
+\end{center}
+
+
+This expression implies that the missing data model does depends on the true values of $\bY$, however, the dependence is only on the observed components. Assuming MAR is the essential part of most of the missing data handling methods. This mechanism means that within levels of observed variables, the probability of having missingness is a constant (i.e., MCAR within each subset) although across different subsets defined by observed variable values, the probability may differ. An example is a scale producing more missing weights when used on a soft surface \cite{van_buuren_flexible_2012}.
+
+The last mechanism, NMAR is defined as follows.
+
+\begin{center}
+  $f(\bM | \bY, \phi) = f(\bM | \bY_{\text{obs}}, \bY_{\text{mis}}, \phi) ~~\forall~~\phi$
+\end{center}
+
+
+This expression implies that the missing data model depends on the true values of $\bY$ both in the observed and missing parts. Notice this model is intractable in reality as we cannot condition on data that are not actually observed. In terms of the probability of having missingness, the probability varies even within levels of observed variables (as we need to define subsets using both observed and unobserved data). An example is a scale producing more missing weights for heavier objects (dependency on the missing weights themselves) \cite{van_buuren_flexible_2012}.
+
+
+\section{Naive missing data methods and their problems}
+
+Complete case analysis is the default option for most statistical software packages and again as a result if is oftern unconsciously conducted by investigators \cite{van_buuren_flexible_2012}.This is essentially sub-sampling of the full sample including observations with missing variables. Only if MCAR is true, this sub-sample is a random sample of the full sample, which makes the sub-sample a random sample of the population, yielding unbiased estimates.
+
+A minor improvement is available case analysis (also pairwise deletion), in which means are calculated from complete observations for each variables and pairwise co-variance are calculated using complete case analysis within each variable pair (“complete cases” can differ depending on variable pairs).
+
+The indicator method extends the data set by a missingness indicator variable for each variable with missing data. In the original variable with missingness, missing data are replaced with 0. Then the analysis is proceeded using both the manipulated original variable and the corresponding indicator variable \cite{van_buuren_flexible_2012}. However, this has been demonstrated to result in severe bias even in the case of MCAR \cite{greenland_critical_1995}.
+
+Single imputation is a technique in which missing data are replaced with plausible values. Examples include marginal mean imputation (or mode imputation for categorical variables), conditional mean imputation (regression imputation), and last observation carried forward (LOCF) for longitudinally observed variables \cite{van_buuren_flexible_2012}. All these approaches impute deterministically, thus, the imputed data have less variability than there should be. The marginal mean approach breaks the relationship between variables. The conditional mean approach is a slight improvement of the marginal mean approach as it leverages the observed data in the other variables. However, the imputed values are all conditional means and disregard variability of data beyond the systematic part of the regression model.
+
+Stochastic regression imputation is a further improvement. Instead of imputing the conditional means, imputation is based on sampling from the conditional distribution given other observed variables. As seen in the summary table (adopted from \cite{van_buuren_flexible_2012}) regarding the assumptions and standard error estimates, this conditional distribution based approach is the best although the problem with the standard error underestimation persists. This method forms the foundation of multiple imputation.
+
+%% Use [H] with float package
+%% \begin{table}[H]
+\begin{table}[!htbp]
+  \centering
+  \begin{tabular}{cccccccccccccccccc}
+                                        & Mean & Regression parameters & Correlation & Standard error \\
+    \hline
+    Complete case                       & MCAR & MCAR                  & MCAR        & Too large      \\
+    Available case                      & MCAR & MCAR                  & MCAR        & Complicated    \\
+    Marginal mean imputation            & MCAR &                       &             & Too small      \\
+    Conditional mean imputation         & MAR  & MAR                   &             & Too small      \\
+    Conditional distribution imputation & MAR  & MAR                   & MAR         & Too small      \\
+    LOCF                                &      &                       &             & Too small      \\
+    Indicator                           &      &                       &             & Too small      \\
+  \end{tabular}
+\end{table}
+
+
+\section{Sophisticated methods other than multiple imputation}
+
+The best approach to missing data is actually prevention \cite{little_prevention_2012} although this is only possible if the study design and the data collection process is under control. If prevention is not possible, inverse probability weighting of the complete cases can be done. Inverse probability weighting of the complete cases is a possible method. Assuming MAR, the unobserved values in the incomplete cases can be represented by the observed values in the complete cases within levels of the observed variables. These complete cases are up-weighted by the inverse of the conditional probability of being observed. The analyses thereafter can be conducted as weighted analyses using these weighted complete cases that are representative of the entire cohort.
+
+The direct likelihood and full information maximum likelihood (FIML) are methods that specify a model specific to the observed data\cite{van_buuren_flexible_2012}, \textit{i.e.}, direct modeling of parameters of intrests given data $f(Q | \bY_{\text{obs}})$ (left-handed side of the equation in the MI section). This allows skipping over missing data (no involvement of missing data in estimation process). Multiple imputation can be thought of as an extension of the likelihood-based approach. Drawing imputed values from the distribution estimated using the observed data is the added step.
+
+
+\section{Multiple imputation}
+
+As previously discussed the weakness of the single imputation methods is that the standard errors are too small as single imputation creates a “complete data set”, which eliminates true uncertainties related to having not observed some parts of the data set. Multiple imputation overcome this limitation by substituting the uncertainty of having missing data with uncertainty of having multiple imputed data sets \cite{van_buuren_flexible_2012}.
+
+Multiple imputation is a three step process. Mathematically, it can be described in the following expression, where $Q$ is the quantity of interest we would like to estimate using the complete data set $\bY$.
+
+$f(Q | \bY_{\text{obs}}) = \int f(Q | \bY_{\text{obs}}, \bY_{\text{mis}}) f(\bY_{\text{mis}} | \bY_{\text{obs}}) \text{d}\bY_{\text{mis}}$
+
+The left handed side is the posterior distribution of the quantity of interest given the observed data. The right handed side implies that we need a model for the quantity of interest given complete data and another model to relate the distribution of missing values to the observed data. The latter model is where MAR assumption is necessary because the missing values cannot be modeled in terms of only observed data in NMAR. The integration over the distribution of missing data given the observed data can be conducted using numerical simulation as follows\cite{little_statistical_2002}.
+
+First, imputed values are drawn from a distribution $f(\bY_{\text{mis}} | \bY_{\text{obs}})$ $m$ times for each missing item, resulting in $m$ imputed complete data sets. Second, each imputed data set is analyzed as a complete data set without any missing data, corresponding to $f(Q | \bY_{\text{obs}}, \bY_{\text{mis}})$. Third, the results (both point estimate and variance) are pooled across imputed data sets using the following formula \cite{rubin_overview_1988} , corresponding to the integration.
+
+\begin{align*}
+  \Qbar & = \frac{1}{m} \sum^m_{l = 1} \Qhat_l                  \\
+  W     & = \frac{1}{m} \sum^{m}_{l=1} Var(\Qhat_l)             \\
+  B     & = \frac{1}{m - 1} \sum^{n}_{i=1} (\Qhat_l - \Qbar)^2 \\
+  T     & = W + B + \frac{1}{m}B
+\end{align*}
+
+The pooled point estimate $\Qbar$ is just the mean of the $m$ point estimates, whereas the pooled variance estimate consists of the mean within-imputation variance $W$ and the variance across imputation data sets $B$. This comes from the variance decomposition formula $Var(Y) = E[Var(Y|X)] + Var(E[Y|X])$ (\textit{i.e.}, $T = W + B$), with an added term $\frac{1}{m}B$ to account for the estimated nature of $\Qbar$. $\lambda = \frac{B + B/m}{T}$ can be interpreted as the proportion of the variation attributable to missing data\cite{van_buuren_flexible_2012}. Although there is an argument this formula is often conservative and in some special situations anti-conservative \cite{robins_inference_2000}, it is still used as the standard method.
+
+The two dominant approaches for implementing multiple imputation are the joint (multivariate normal; MVN) distribution approach and the conditional distribution approach \cite{kropko_multiple_2014}. Both approaches are reviewed here individually and then compared for their strengths and weaknesses.
+
+
+\subsection{Joint (multivariate normal) distribution multiple imputation}
+
+As the name suggests the joint distribution multiple imputation approach assumes a multivariate joint distribution of the data at hand, which is usually assumed to follow multivariate normal (MVN) distribution. Firstly, a MVN is assumed on the data, the parameters for this MVN are estimated, then imputed values are drawn from this estimated MVN of the data \cite{kropko_multiple_2014}.
+
+
+The actual imputation process proceed as follows \cite{king_analyzing_2001}. A MVN is assumed on the entire data set $\bY$. This implies all marginal and conditional distributions are also assumed to be (multivariate) normal. The arguments for and against this assumption is discussed in the comparison part. Let $\bY_{i}$ be the $i$-th row ($i = 1,...,n$) of the data matrix $\bY_{n \times p}$. By the MVN assumption, $\bY_{i} \sim MVN(\bmu, \bSigma)$, \textit{i.e.}, each observation follows an MVN with parameters $\bmu$ and $\bSigma$. The off diagonal elements of $\bSigma$ dictates the pairwise correlation structure of columns (variables) in $\bY$. The likelihood function for the hypothetical complete data assuming independence between observations (rows) is:
+
+\begin{center}
+  $L(\bmu, \bSigma | \bY) \propto \prod \limits^n_{i=1} f(\bY_i | \bmu, \bSigma) ~~ \text{where $f$ is MVN pdf}$
+\end{center}
+
+Assuming MAR, the likelihood function conditional only on the observed data can be described as follows and should be parametrized by the same $\bmu$ and $\bSigma$.
+
+\begin{center}
+  $L(\bmu, \bSigma | \bY_{\text{obs}}) \propto \prod \limits^n_{i=1} f(\bY_{i,\text{obs}} | \bmu_{i,\text{obs}}, \bSigma_{i,\text{obs}})$
+\end{center}
+
+$\bY_{i,\text{obs}}$ means the observed sub-vector of the full vector $\bY_{i}$ for the $i$-th observation. $\bmu_{i,\text{obs}}$ and $\bSigma_{i,\text{obs}}$ are subset of the corresponding parameters necessary to describe the distribution from which the observed sub-vector $\bY_{i,\text{obs}}$ came from. Note depending on the specific $i$, $\bmu_{i,\text{obs}}$ and $\bSigma_{i,\text{obs}}$ are different sub-vector and sub-matrix because each observation may have different elements of $\bY_i$ missing. Let $\bY_{i,\text{mis}}$ be the missing sub-vector for the $i$-th individual. Once $\bmuhat$ and $\bSigmahat$ are obtained we can impute the sub-vector $\bY_{i,\text{mis}}$ by a random draw from the estimated MVN conditional on the observed sub-vector $\bY_{i,\text{obs}}$. This imputation process can be repeated $m$ times for each observation to generate $m$ imputed data sets, which can then be utilized for separate analyses and pooling. How to implement this computationally is another issue. The complicated nature of the observed data likelihood makes it difficult to maximize in classical methods. Roughly speaking there are two ways to implement this \cite{king_analyzing_2001}. These are the Imputation-Posterior (IP) algorithm \cite{tanner_calculation_1987} and the Expectation Maximization (EM) algorithm \cite{dempster_maximum_1977}.
+
+
+\subsubsection{Imputation-Posterior (IP) algorithm}
+
+The IP algorithm\cite{king_analyzing_2001, tanner_calculation_1987} is a data augmentation method that enables drawing random simulations from the MVN parameter posterior. It is implemented as an iterative MCMC process with the following steps.
+
+\begin{gather*}
+  \text{Imputation step: Draw imputed values $\bYtilde_{\text{mis}}$}\\
+  \bYtilde_{\text{mis}}^{(t)} \sim f(\bY_{\text{mis}} | \bY_{\text{obs}}, \bmutilde^{(t)}, \bSigmatilde^{(t)})\\
+  \text{Posterior step: Draw updated parameters $\bmutilde, \bSigmatilde$}\\
+  \bmutilde^{(t+1)}, \bSigmatilde^{(t+1)} \sim f(\bmu,\bSigma | \bY_{\text{obs}}, \bYtilde_{\text{mis}}^{(t)})\\
+  \text{Repeat until convergence}
+\end{gather*}
+
+The $I$ step start with some arbitrary initial values for $\bmutilde$ and $\bSigmatilde$ (EM estimates can be used). Then the missing data are drawn from the conditional distribution given the observed data and the estimated MVN. Using the resulting posterior distribution $f(\bmu,\bSigma | \bY_{\text{obs}}, \bYtilde_{\text{mis}})$, the parameter estimates are updated. This is an MCMC process, thus theoretically, convergence to the stationary distributions of $\bY_\text{mis}$, $\bmu$, and $\bSigma$ occur after after infinite iterations. In practice, a sufficient initial burn-in period must be discarded from the chain to obtain the approximate stationary distribution, which must be assessed with empirically using diagnostic tools. Also the raw chain from an MCMC process violates independence because each step is dependent on the estimates from the previous step. Therefore, either thinning (keep only every $r$-th iteration) or use a separate MCMC chain for each one of $m$ imputed data sets is necessary. In the implementation of \texttt{norm} package\cite{schafer_norm:_2013}, only the last draw of $\bmu$ and $\bSigma$ from the MCMC chain are used (last $P$ step). $\bY_\text{mis}$ is then drawn (last $I$ step) from the MVN determined by these last-step $\bmu$ and $\bSigma$. Thus, use of $m$ separate MCMC chains are required to preserve uncertain arising from estimation of $\bmu$ and $\bSigma$.
+
+
+\subsubsection{Expectation Maximization (EM) algorithm}
+
+The EM algorithm\cite{king_analyzing_2001, dempster_maximum_1977} is similar to the IP algorithm except that instead of stochastic draws from the entire posterior, the EM algorithm calculates posterior means deterministically-- done explicitly in the expectation step. In the maximization ($M$) step corresponding to the $P$ step, the posterior modes are used to update the estimated parameters $\bmutilde$ and $\bSigmatilde$.
+
+\begin{gather*}
+  \text{Expectation step: Estimate}\\
+  \Etilde^{(t)}[\bY_{\text{mis}} | \bY_{\text{obs}}, \bmutilde^{(t)}, \bSigmatilde^{(t)}] ~~\text{Using } f(\bY_{\text{mis}} | \bY_{\text{obs}}, \bmutilde^{(t)}, \bSigmatilde^{(t)})\\
+  \text{Maximization step: Estimate}\\
+  \bmutilde^{(t+1)}, \bSigmatilde^{(t+1)} ~~\text{Using } f(\bmu,\bSigma | \bY_{\text{obs}}, \Etilde^{(t)}[\bY_{\text{mis}} | \bY_{\text{obs}}, \bmutilde^{(t)}, \bSigmatilde^{(t)}])\\
+  \text{Repeat until convergence}
+\end{gather*}
+
+What we obtain after convergence is the point estimates of $E[\bY_{\text{mis}} | \bY_{\text{obs}}, \bmu, \bSigma]$, $\bmu$, and $\bSigma$. Multiple imputed data sets can then be created by using point estimates of $\bmu$ and $\bSigma$. This ignores the estimation uncertainty because only point estimates are obtained and used. The \texttt{amelia} package\cite{king_analyzing_2001,honaker_what_2010} preserves the estimation uncertainty by using $m$ bootstrap re-samples and $m$ EM processes to obtain $m$ different point estimates of $\bmu$ and $\bSigma$.
+
+
+\subsection{Conditional distribution multiple imputation}
+
+Given the observed and imputed values in the data set, conditional MI aims to model the conditional distributions of partially observed variables (i.e variables with incomplete data) across observations. Assume $\bY = (Y_1, Y_2, ... , Y_k)$ is a vector of $k$ random variables with a multivariate joint distribution fully specified by parameter $\theta$. Further assume that each variable has n observations, and has missing-ness. The standard procedure for creating multiple imputations \cite{van_buuren_fully_2006} is as follows:
+
+\begin{enumerate}[(1)]
+\item Calculate the posterior distribution of $\theta$ conditional on the observed variables
+\item Draw a value $\theta^*$ for the posterior
+\item Draw a value $y^*$ from the conditional posterior distribution of the missing values given the observed values and $\theta$ = $\theta^*$
+\end{enumerate}
+
+
+For multivariate $\bY$ it is often difficult to get the multivariate distribution of $\theta$. An option is to obtain posterior distributions of $k$ separate $\theta$ by iteratively sampling from the conditional distributions of each variable. The conditional distribution are of the form
+
+\begin{align*}
+  &P(Y_1| Y_{-1}, \theta_1)\\
+  &P(Y_1| Y_{-2}, \theta_2)\\
+  &\vdots\\
+  &P(Y_k| Y_{-k}, \theta_k)
+\end{align*}
+
+ where the conditional distribution of the $k$-th variable is a function of $\theta_k$ and the other variables in the data set. Buuren, \textit{et al} \cite{van_buuren_fully_2006}, provides more detailed insight for the $t$-th iteration of the method as follows:
+
+\begin{align*}
+ \theta_1^{*(t)} &\sim P(\theta_1 | y_1^{\text{obs}}, y_2^{t-1}, ..., y_k^{(t-1)})\\
+  y_1^{(t)} &\sim P(y_1^{\text{mis}} | y_1^{\text{obs}}, y_2^{t-1}, ..., y_k^{(t-1)}, \theta_1^{*(t)})\\
+  &\vdots\\
+  \theta_k^{*(t)} &\sim P(\theta_k | y_k^{\text{obs}}, y_1^{t}, y_2^{t}, ..., y_{k-1}^{(t)})\\
+  y_k^{(t)} &\sim P(y_k^{\text{mis}} | y_k^{\text{obs}}, y_1^{t}, ..., y_{k-1}^{(t)}, \theta_k^{*(t)})
+\end{align*}
+
+
+Here it is readily seen that no information on the missing values is used to sample values for any $\theta$. This algorithm can be further explained as two nested loop \cite{kropko_multiple_2014}. The first loop iterates through the variables with missing-ness and imputes values for the missing entries. In order to determine the imputed values for a variable, first the variable specific theta is sampled from the posterior distribution conditional on the observed values within that variable strata, and the t-th iteration of the other imputed (or not) variables. Then the imputed values are sampled from the posterior distribution of the missing values; the conditioning is similar to that of the variable specific $\theta$ but also includes the $\theta$. This first loop is nested inside of a second loop that repeats the process until there appears to be convergence.
+
+
+\subsection{Relative strengths and weaknesses}
+
+\subsubsection{Violation of MVN}
+
+The joint MVN MI is based on a sound theoretical foundation assuming MVN-distributed data. However, in practice data can have varying degrees of departure from the MVN. As random samples from an MVN, the imputed values from the joint MVN MI follow normal distributions, meaning they are not bounded and are continuous. This can be awkward when the variables being imputed are bounded and/or discrete. For example, when ``male'' variable is coded 0,1, imputed values can be 0.3 or even 1.7. Rounding is one common approach, \textit{e.g.}, 0.3 can be rounded to 0 (female) and 1.7 can be rounded to 1 (male). This will make the imputed values look ``natural'', however, there is an argument that this type of rounding may actually introduce bias\cite{horton_n._j_potential_2003}. One approach is to leave these in-feasible values as is because imputed values themselves are not of importance in multiple imputation. It is about estimating the parameters of interest with less bias due to missing data.
+
+Another approach is to probabilistically assign feasible values\cite{kropko_multiple_2014,honaker_amelia_2011}. For example, out-of-range values are rounded to the nearest feasible values, and the imputed values within the possible range of values are subject to probabilistic draw, \textit{i.e.}, 0.3 is replaced by the result of $Bernoulli(0.3)$ for the binary case. The joint MVN MI has been shown to be robust to departure from normality when imputing non-normal continuous variables\cite{demirtas_plausibility_2008}.
+
+It may be beneficial to transform non-normal continuous variables so that it is more amenable to the MVN, impute, and then transform back to the original form\cite{van_buuren_flexible_2012}. There are various extensions to the joint modeling approach to accommodate both continuous and categorical data\cite{van_buuren_flexible_2012}. The conditional MI approach is more flexible in this regard as specifying different conditional model (logistic, multinomial logistic, Poisson, etc) for each type of variables is possible. A simulation study found that the conditional approach was accurate in terms of imputed values and estimates of interest whenever the data included categorical variables \cite{kropko_multiple_2014}.
+
+
+\subsubsection{Theoretical problem with conditional distribution MI}
+
+Although the conditional MI samples from the posterior distribution of the variable specific missing values, it does not use this information to sample the variable specific $\theta$. This is a direct departure from the Gibbs sampler and the theoretical underpinnings have been largely critiqued \cite{kropko_multiple_2014}.  Furthermore, when modeling $k$ variables with missing-ness the variable specific parameters are likely to be dependent on each other, or over parameterized, and do not share a $k$ dimensional joint distribution \cite{van_buuren_fully_2006}. Therefore, unlike the Gibbs sampler, conditional MI is not always theoretically guaranteed to converge to the correct posterior distribution (or at all), and is possible to converge to different posterior distributions varying with the initial conditions. However, simulations appear to show conditional MI is robust against over parameterization, and the method produces reasonable imputations-- justifying its’ use in practice. Continuing, conditional MI is relatively powerful and convenient. Combined with the added benefit of not having to specify a joint model, sampling from the variable specific distribution adds increased flexibility in model building \cite{van_buuren_fully_2006}. In particular, transformations of variables can be incorporated without any added complexity.
+
+
+\subsubsection{Consideration of high dimensional data}
+
+Missing data are also problematic in the high-dimensional setting. Even if each variable has a small proportion of missing data, over many variables, many observations are likely to have at least some missing data. This makes handling of missing data more important. MI encounter difficulties with high-dimensional data where the number of variables are larger than the number of observations\cite{zhao_multiple_2013} ($p > n$). Estimation of distributional parameters are difficult in such settings for the joint MVN MI as the $p \times p$ variance-co-variance matrix is huge with numerous parameters. The conditional approach encounters difficulty of running regression model with a column-rank deficient design matrix.
+
+To reduce the number of parameters for the $p \times p$ co-variance matrix in the joint MI, a hierarchical co-variance model has been examined\cite{he_multiple_2014}. In this method, a structure with parsimonious parameterization is introduced for the co-variance matrix, and these relatively few parameters are estimated, instead of trying to estimate all individual parameters in the co-variance matrix. The regular conditional MI can only handle $p < n$ data, however, use of regularization technique incorporated into the conditional MI process has been examine in the high-dimensional data with some success\cite{zhao_multiple_2013}. Among these methods, the Bayesian LASSO regression performed the best. In one simulation study involving high-dimensional proteomics data with artificial missingness\cite{yin_multiple_2015}, the authors compared both the joint and the conditional approach. They approached the $p > n$ problem by randomly binning the co-variates into smaller subsets that are individually amenable to regular MI software. They found the joint approach performed somewhat better than the conditional approach. MI in the presence of high-dimensional data is still an active area of methodological research.
+
+
+\subsection{Software review}
+
+Here we summarize publicly available \texttt{R} packages for their distributional specification and implementation.
+
+\begin{table}[!htbp]
+  \centering
+  \begin{tabular}{cccccccccccccccccc}
+    Package         & Distribution & Algorithm & Note    \\
+    \hline
+    \texttt{amelia}\cite{honaker_amelia_2011,honaker_amelia:_2014} & Joint (MVN) & EM with bootstrap & Works with \texttt{Zelig}; Fast due to EM\\
+    \texttt{norm}\cite{schafer_norm:_2013} & Joint (MVN) & IP (MCMC)/EM & Most classical method\\
+    \texttt{cat}\cite{schafer_cat:_2012} & Joint (log-linear model) & MCMC & For categorical variables\\
+    \texttt{mix}\cite{schafer_mix:_2015} & Joint (general location model) & MCMC & For mixed categorical/continuous\\
+    \texttt{pan}\cite{schafer_pan:_2015} & ? (linear mixed model) & MCMC? & For clustered data\\
+    \texttt{mice}\cite{buuren_mice:_2011,buuren_mice:_2014} & Conditional & Original FCS & Good user interface\\
+    \texttt{mi}\cite{gelman_mi:_2015} & Conditional & Bayesian regression\\
+    \texttt{BaBooN}\cite{meinfelder_baboon:_2015} & Conditional & Bayesian bootstrap\\
+    \texttt{smcfcs}\cite{bartlett_smcfcs:_2015,bartlett_smcfcs:_2015} & Conditional & Modified FCS & Addresses theoretical problem with FCS\\
+    \texttt{mitools}\cite{lumley_mitools:_2014} & - & - & Utility for Rubin's rule\\
+  \end{tabular}
+\end{table}
+
+
+\section{Conclusion}
+
+In this paper, we reviewed the principles of missing data handling, focusing on multiple imputation and its popular algorithms. The two popular approaches are the joint approach and the conditional approach. The joint approach has more sound theoretical background as the joint distribution is directly estimated, whereas the conditional approach implies the joint distribution, which may or may not exist, by multiple conditional uni-variate distributions. The joint approach usually resort to the MVN, which may not closely represent the data. With the conditional approach, it is easy to incorporate different variable types as each variable is modeled one at a time. In simulation studies, they often perform similarly although some differences may exist in specific settings. Understanding the algorithms implemented in software and their assumption is important in making better choices.
+
+
+\newpage
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%% https://www.sharelatex.com/learn/Bibtex_bibliography_styles
+\bibliographystyle{ieeetr}
+\bibliography{MI_Project}
+\end{document}
+
+% Local Variables:
+% zotero-collection: #("0" 0 1 (name "*ALL*"))
+% End:
+
