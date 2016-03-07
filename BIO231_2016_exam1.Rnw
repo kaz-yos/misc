@@ -1,0 +1,160 @@
+\documentclass{article}
+
+%% Templates
+%% http://www.latextemplates.com
+
+%% Margin
+%% \usepackage[margin=1.5cm]{geometry}
+\usepackage[top=2cm, bottom=2cm, left=2cm, right=2cm, headsep=4pt]{geometry}
+%% \addtolength{\topmargin}{0.3cm}
+%% \addtolength{\textheight}{1.75in}
+
+%% Math
+\usepackage{amsmath}
+\usepackage{amssymb}
+\usepackage{wasysym}
+\newcommand{\ind}{\mathrel{\text{\scalebox{1.07}{$\perp\mkern-10mu\perp$}}}}
+%% Allow new page within align
+\allowdisplaybreaks
+\usepackage{cancel}
+
+% % Code
+\usepackage{listings}
+\usepackage{courier}
+\lstset{basicstyle=\footnotesize\ttfamily, breaklines=true, frame=single}
+
+%% Graphics
+\usepackage{graphicx}
+
+%% DAG
+\usepackage{tikz}
+\usetikzlibrary{positioning,shapes.geometric}
+
+%% Date
+\usepackage[yyyymmdd]{datetime}
+\renewcommand{\dateseparator}{--}
+
+%% Header
+\usepackage{fancyhdr}
+\pagestyle{fancy}
+\fancyhf{} % Erase first to supress section names
+\fancyhead[L]{Kazuki Yoshida} % LEFT
+\fancyhead[C]{Exam 1 Preparation} % CENTER
+\fancyhead[R]{\today} % RIGHT
+\fancyfoot[C]{\thepage}
+%% \fancyfoot[R]{Page \thepage\ of \pageref{LastPage}}
+
+%% Section font size
+\usepackage{sectsty}
+\sectionfont{\small}
+\subsectionfont{\small}
+\subsubsectionfont{\small}
+
+%% Section numbering
+%% http://tex.stackexchange.com/questions/3177/how-to-change-the-numbering-of-part-chapter-section-to-alphabetical-r
+%% \renewcommand\thesection{\alph{section}}
+%% \renewcommand\thesubsection{\thesection.\arabic{subsection}}
+%% \renewcommand{\thesubsubsection}{\thesubsection.\alph{subsubsection}}
+%%
+%% http://tex.stackexchange.com/questions/40067/numbering-sections-with-sequential-integers
+%% \usepackage{chngcntr}
+%% \counterwithout{subsection}{section}
+
+%% enumerate
+\usepackage{enumerate}
+
+%% double space
+%% \usepackage{setspace}
+%% \linespread{2}
+
+%% Paragraph Indentation
+\usepackage{indentfirst}
+\setlength{\parindent}{4em}
+
+%% Spacing after headings
+%% http://tex.stackexchange.com/questions/53338/reducing-spacing-after-headings
+\usepackage{titlesec}
+\titlespacing      \section{0pt}{12pt plus 4pt minus 2pt}{0pt plus 2pt minus 2pt}
+\titlespacing   \subsection{0pt}{12pt plus 4pt minus 2pt}{0pt plus 2pt minus 2pt}
+\titlespacing\subsubsection{0pt}{12pt plus 4pt minus 2pt}{0pt plus 2pt minus 2pt}
+
+%% Fix figures and tables by [H]
+\usepackage{float}
+
+%% Allow URL embedding
+\usepackage{url}
+
+\begin{document}
+<<message = FALSE, tidy = FALSE, echo = F>>=
+## knitr configuration: http://yihui.name/knitr/options#chunk_options
+library(knitr)
+showMessage <- FALSE
+showWarning <- TRUE
+set_alias(w = "fig.width", h = "fig.height", res = "results")
+opts_chunk$set(comment = "##", error= TRUE, warning = showWarning, message = showMessage,
+               tidy = FALSE, cache = F, echo = T,
+               fig.width = 5, fig.height = 5, dev.args = list(family = "sans"))
+## library(rgl)
+## knit_hooks$set(rgl = hook_rgl)
+rnd <- function(x, digits = 2) {sprintf(fmt = paste0("%.", digits,"f"), x)}
+
+@
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\section{Midterm exam practice problem 4}
+
+\begin{align*}
+  0 &= E \left[ g(t) \right]\\
+  0 &= \int_{\theta}^{\infty} g(t) ne^{-n(t-\theta)} \text{d}t\\
+  \frac{\partial}{\partial \theta} 0 &= \frac{\partial}{\partial \theta} \int_{\theta}^{\infty} g(t) ne^{-n(t-\theta)} \text{d}t\\
+  &\text{By Differentiation under the integral sign}\\
+  0 &= - g(\theta) ne^{-n(~{\color{blue}\theta}~-\theta)} + \int_{\theta}^{\infty} \frac{\partial}{\partial \theta} g(t) ne^{-n(t-\theta)} \text{d}t\\
+  0 &= - g(\theta) ne^{-n(~{\color{blue}\theta}~-\theta)} + \int_{\theta}^{\infty} g(t) n^{2}e^{-n(t-\theta)} \text{d}t\\
+  &\text{All $t$ in the first term should be replaced with $\theta$}\\
+\end{align*}
+
+\noindent
+Differentiation under the integral sign\\
+\url{https://en.wikipedia.org/wiki/Differentiation_under_the_integral_sign}\\
+
+
+\section{Midterm exam practice problem 6}
+
+\begin{align*}
+  &\text{From Lab 6 Problem 1, posterior for $theta$ is}\\
+  \pi(\theta | x) &= \frac{x I(0 \le x < \theta < 1)}{\theta^{2}(1-x)}\\
+  \\
+  &\text{Bayes estimator using squared error loss is posterior mean}\\
+  E[\theta^{3} | x]
+  &= \int_{x}^{1} \theta^{3} \pi(\theta | x) \text{d}\theta\\
+  &= \int_{x}^{1} \theta^{3} \frac{x I(0 \le x < \theta < 1)}{\theta^{2}(1-x)} \text{d}\theta\\
+  &= \int_{x}^{1} \theta^{3} \frac{x I(0 \le x < \theta < 1)}{\theta^{2}(1-x)} \text{d}\theta\\
+  &= \int_{x}^{1} \theta^{3} \frac{x}{\theta^{2}(1-x)} \text{d}\theta\\
+  &= \int_{x}^{1} \theta \frac{x}{(1-x)} \text{d}\theta\\
+  &= \frac{x}{1-x} \int_{x}^{1} \theta \text{d}\theta\\
+  &= \frac{x}{1-x} \left[ \frac{1}{2} \theta^{2} \right]_{x}^{1}\\
+  &= \frac{x}{2(1-x)} \left[ \theta^{2} \right]_{x}^{1}\\
+  &= \frac{x}{2(1-x)} \left[ 1 - x^{2} \right]\\
+  &= \frac{x}{2(1-x)} \left[ (1 + x)(1 - x) \right]\\
+  &= \frac{~{\color{blue}x}~(1+x)}{2}\\
+  &\text{The first $x$ was missed in the solution}\\
+\end{align*}
+
+
+\section{Lab 6 practice problem 2(3)}
+
+\begin{align*}
+  \pi(\sigma^{2} | \mathbf{x})
+  &\propto \left[ \frac{(n-1)S^{2}}{\sigma^{2}} \right]^{\left( \frac{n+1}{2} + 1 - 1 \right)} \exp \left[ -\frac{(n-1)S^{2}}{2\sigma^{2}} \right]\\
+  &= \left[ \frac{(n-1)S^{2}}{\sigma^{2}} \right]^{\left( \frac{n+3}{2} - 1 \right)} \exp \left[ -\frac{(n-1)S^{2}}{2\sigma^{2}} \right]\\
+  &\chi^{2} \text{ with {\color{blue}$n+3$} degrees of freedom}\\
+\end{align*}
+
+
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%% https://www.sharelatex.com/learn/Bibtex_bibliography_styles
+%% \bibliographystyle{ieeetr}
+%% \bibliography{bib_file_name}
+\end{document}
